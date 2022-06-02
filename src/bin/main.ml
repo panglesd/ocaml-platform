@@ -67,9 +67,8 @@ let main () =
         `Noblank;
         `P "- Editor helper: $(b,merlin)";
         `P
-          "You can install the OCaml \
-           Platform tools in your current $(b,opam) switch by running \
-           $(mname).";
+          "You can install the OCaml Platform tools in your current $(b,opam) \
+           switch by running $(mname).";
         `P
           "For more information on how to get running with OCaml, you can \
            refer to the official Get Up and Running With OCaml guide: \
@@ -94,6 +93,11 @@ let main () =
         `P "Paul-Elliot Anglès d'Auriac, $(i,https://github.com/panglesd)";
         `P "Sonja Heinze, $(i,https://github.com/pitag-ha)";
         `P "Thibaut Mattio, $(i,https://github.com/tmattio)";
+        `S Manpage.s_see_also;
+        `P
+          "Consult the project README on \
+           $(i,https://github.com/tarides/ocaml-platform) for more information \
+           on what the tool does under the hood.";
       ]
     in
     Cmd.info "ocaml-platform" ~man ~doc ~version:"%%VERSION%%"
