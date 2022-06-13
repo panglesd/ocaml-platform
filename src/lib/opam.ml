@@ -33,54 +33,64 @@ module Cmd = struct
       v "opam" %% cmd % "--yes" % "-q" % "--color=never" %% switch_cmd
       %% root_cmd)
 
-  let run_gen opam_opts out_f cmd =
+  let run_gen ?height opam_opts out_f cmd =
     let cmd = t opam_opts cmd in
-    Result.flatten
-    @@ Bos.OS.File.with_tmp_output "opam-err-log-%s"
-         (fun tmp _ () ->
-           let* result, status, success =
-             Bos.OS.Cmd.(
-               run_out ?env:opam_opts.env ~err:(err_file tmp) cmd |> out_f)
-           in
-           let () =
-             let s = Bos.OS.File.read tmp in
-             match s with
-             | Ok "" -> ()
-             | Ok s -> Logs.debug (fun m -> m "%s" s)
-             | Error (`Msg e) ->
-                 Logs.debug (fun m -> m "Impossible to read opam log: %s" e)
-           in
-           if success then Ok result
-           else
-             Result.errorf "Command '%a' failed: %a" Bos.Cmd.pp cmd
-               Bos.OS.Cmd.pp_status status)
-         ()
+    let cmd_s = Bos.Cmd.to_string cmd in
+    let ((ic, _, ic_err) as channels) =
+      Unix.open_process_full cmd_s (Unix.environment ())
+    in
+    let height =
+      ignore height;
+      Some 15
+    in
+    let s =
+      (match height with
+      | None -> In_channel.input_all ic
+      | Some height -> Ansi_box.print_ic ~height ic)
+      |> String.trim
+    in
+    let s_err = In_channel.input_all ic_err in
+    (match s_err with "" -> () | s -> Logs.debug (fun m -> m "%s" s));
+    let result, status, success =
+      (s, Unix.close_process_full channels) |> out_f
+    in
+    let pp_status fmt status =
+      match status with
+      | Unix.WEXITED i -> Format.fprintf fmt "exited with %d" i
+      | Unix.WSIGNALED i -> Format.fprintf fmt "killed by signal SIG(%d)" i
+      | Unix.WSTOPPED i -> Format.fprintf fmt "stopped by signal SIG(%d)" i
+    in
+    if success then Ok result
+    else Result.errorf "Command '%a' failed: %a" Bos.Cmd.pp cmd pp_status status
 
   let out_strict out_f out =
-    let+ result, (_, status) = out_f out in
-    let success = match status with `Exited 0 -> true | _ -> false in
+    let result, status = out_f out in
+    let success = match status with Unix.WEXITED 0 -> true | _ -> false in
     (result, status, success)
 
   (** Handle Opam's "not found" exit status, which is [5]. Returns [None]
       instead of failing in this case. *)
   let out_opt out_f out =
-    let+ result, (_, status) = out_f out in
+    let result, status = out_f out in
     match status with
-    | `Exited 0 -> (Some result, status, true)
-    | `Exited 5 -> (None, status, true)
+    | Unix.WEXITED 0 -> (Some result, status, true)
+    | Unix.WEXITED 5 -> (None, status, true)
     | _ -> (None, status, false)
 
-  let run_s opam_opts cmd =
-    run_gen opam_opts (out_strict Bos.OS.Cmd.out_string) cmd
+  let run_s ?height opam_opts cmd =
+    run_gen ?height opam_opts (out_strict Fun.id) cmd
 
-  let run_l opam_opts cmd =
-    run_gen opam_opts (out_strict Bos.OS.Cmd.out_lines) cmd
+  let run_l ?height opam_opts cmd =
+    run_gen ?height opam_opts
+      (out_strict (fun (s, status) -> (String.cuts ~sep:"\n" s, status)))
+      cmd
 
-  let run opam_opts cmd = run_gen opam_opts (out_strict Bos.OS.Cmd.out_null) cmd
+  let run ?height opam_opts cmd =
+    run_gen ?height opam_opts (out_strict (fun (_, status) -> ((), status))) cmd
 
   (** Like [run_s] but handle the "not found" status. *)
-  let run_s_opt opam_opts cmd =
-    run_gen opam_opts (out_opt Bos.OS.Cmd.out_string) cmd
+  let run_s_opt ?height opam_opts cmd =
+    run_gen ?height opam_opts (out_opt Fun.id) cmd
 end
 
 module Config = struct
@@ -181,6 +191,7 @@ module Show = struct
           v "show" %% of_list pkg_names % "-f" % "name,installed-version"
           % "--normalise")
     in
+    Logs.debug (fun m -> m "debug %s" res);
     let+ res = parse res in
     List.map (function a, "--" -> (a, None) | a, s -> (a, Some s)) res
 
@@ -192,7 +203,7 @@ module Show = struct
 end
 
 let install opam_opts pkgs =
-  Cmd.run opam_opts Bos.Cmd.(v "install" %% of_list pkgs)
+  Cmd.run ~height:10 opam_opts Bos.Cmd.(v "install" %% of_list pkgs)
 
 let remove opam_opts pkgs =
   Cmd.run opam_opts Bos.Cmd.(v "remove" %% of_list pkgs)
