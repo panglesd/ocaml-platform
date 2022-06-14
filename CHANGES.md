@@ -2,6 +2,7 @@
 
 ## unreleased
 
+- Log few sliding lines of opam output when building the tools (#57)
 - Fix crash while parsing version constraints (#70)
 - Speed-up creating the sandbox switch (#56)
 - Improve the installer script's output (#62)
