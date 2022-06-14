@@ -29,9 +29,7 @@ module Cmd = struct
       | Some switch -> v "--switch" % switch
     in
     let root_cmd = v "--root" % p opam_opts.root in
-    Bos.Cmd.(
-      v "opam" %% cmd % "--yes" % "-q" % "--color=never" %% switch_cmd
-      %% root_cmd)
+    Bos.Cmd.(v "opam" %% cmd % "--yes" % "-q" %% switch_cmd %% root_cmd)
 
   let run_gen ?height opam_opts out_f cmd =
     let cmd = t opam_opts cmd in
@@ -39,16 +37,7 @@ module Cmd = struct
     let ((ic, _, ic_err) as channels) =
       Unix.open_process_full cmd_s (Unix.environment ())
     in
-    let height =
-      ignore height;
-      Some 15
-    in
-    let s =
-      (match height with
-      | None -> In_channel.input_all ic
-      | Some height -> Ansi_box.print_ic ~height ic)
-      |> String.trim
-    in
+    let s = Ansi_box.read_and_print_ic ~height ic in
     let s_err = In_channel.input_all ic_err in
     (match s_err with "" -> () | s -> Logs.debug (fun m -> m "%s" s));
     let result, status, success =
@@ -78,19 +67,21 @@ module Cmd = struct
     | _ -> (None, status, false)
 
   let run_s ?height opam_opts cmd =
-    run_gen ?height opam_opts (out_strict Fun.id) cmd
+    run_gen ?height opam_opts
+      (out_strict (fun (s, status) -> (String.concat ~sep:"\n" s, status)))
+      cmd
 
   let run_l ?height opam_opts cmd =
-    run_gen ?height opam_opts
-      (out_strict (fun (s, status) -> (String.cuts ~sep:"\n" s, status)))
-      cmd
+    run_gen ?height opam_opts (out_strict Fun.id) cmd
 
   let run ?height opam_opts cmd =
     run_gen ?height opam_opts (out_strict (fun (_, status) -> ((), status))) cmd
 
   (** Like [run_s] but handle the "not found" status. *)
   let run_s_opt ?height opam_opts cmd =
-    run_gen ?height opam_opts (out_opt Fun.id) cmd
+    run_gen ?height opam_opts
+      (out_opt (fun (s, status) -> (String.concat ~sep:"\n" s, status)))
+      cmd
 end
 
 module Config = struct
@@ -191,7 +182,6 @@ module Show = struct
           v "show" %% of_list pkg_names % "-f" % "name,installed-version"
           % "--normalise")
     in
-    Logs.debug (fun m -> m "debug %s" res);
     let+ res = parse res in
     List.map (function a, "--" -> (a, None) | a, s -> (a, Some s)) res
 
