@@ -1,15 +1,15 @@
 open! Import
 open ANSITerminal
 
-let read_and_print_ic ~height ic =
+let read_and_print_ic ~log_height ic =
   let printf = printf [ Foreground Blue ] in
   let print_history h =
-    match height with
+    match log_height with
     | None -> ()
-    | Some height ->
+    | Some log_height ->
         let rec refresh_history h n =
           match h with
-          | a :: q when n <= height ->
+          | a :: q when n <= log_height ->
               erase Eol;
               printf "%s"
                 (String.sub a 0 @@ min (String.length a) ((fst @@ size ()) - 1));
@@ -21,7 +21,7 @@ let read_and_print_ic ~height ic =
               move_bol ()
         in
         let i = List.length h in
-        if i < height then
+        if i <= log_height then
           match h with
           | [] -> ()
           | line :: _ ->
@@ -32,10 +32,10 @@ let read_and_print_ic ~height ic =
         flush_all ()
   in
   let clean history =
-    match height with
+    match log_height with
     | None -> ()
-    | Some height ->
-        for _ = 0 to Int.min (List.length history) height do
+    | Some log_height ->
+        for _ = 0 to Int.min (List.length history) log_height do
           move_bol ();
           erase Eol;
           move_cursor 0 (-1)

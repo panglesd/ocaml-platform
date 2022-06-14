@@ -138,8 +138,3 @@ let main () =
   Stdlib.exit @@ Cmd.eval' (Cmd.v info term)
 
 let () = main ()
-(* ignore main; *)
-(* let opam_opts = Platform.Opam.GlobalOpts.default in *)
-(* match Platform.Opam.install opam_opts [ "tyxml" ] with *)
-(* | Error (`Msg f) -> print_endline f *)
-(* | Ok () -> () *)
