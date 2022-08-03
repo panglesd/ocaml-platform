@@ -51,6 +51,10 @@ jobs:
         if: ${{ matrix.runAllTests }}
         run: ./test/run_test.sh install
 
+      - name: "Test: ocaml5"
+        if: ${{ matrix.runAllTests }}
+        run: ./test/run_test.sh ocaml5
+
       - name: "Test: version"
         if: ${{ matrix.runAllTests }}
         run: ./test/run_test.sh version
