@@ -79,8 +79,13 @@ let filter_exists files =
   in
   loop [] files
 
+(** Remove prefix in paths. *)
+let remove_prefix ~prefix paths =
+  List.filter_map (fun p -> Fpath.rem_prefix prefix p) paths
+
 (** Remove paths starting with [lib/]. *)
-let remove_lib ~prefix paths = List.filter Fpath.(is_prefix (prefix / "lib")) paths
+let remove_lib ~prefix paths =
+  List.filter (fun p -> not (Fpath.(is_prefix (prefix / "lib")) p)) paths
 
 type binary_pkg = Package.Install_file.t * Package.Opam_file.t
 
@@ -89,8 +94,11 @@ type binary_pkg = Package.Install_file.t * Package.Opam_file.t
 let make_binary_package ~ocaml_version ~arch ~os_distribution ~prefix ~files
     ~archive_path bname ~name:query_name ~pure_binary =
   filter_exists files >>= fun files ->
-  let paths = remove_lib ~prefix files in
-  let tar_input = List.map Fpath.to_string paths |> String.concat ~sep:"\n" in
+  let paths = files |> remove_lib ~prefix |> remove_prefix ~prefix in
+  let tar_input =
+    List.map Fpath.(( // ) (v "_opam")) paths
+    |> List.map Fpath.to_string |> String.concat ~sep:"\n"
+  in
   OS.Cmd.(
     in_string tar_input
     |> run_in
