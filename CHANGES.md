@@ -2,6 +2,7 @@
 
 ## unreleased
 
+- Fix the fact that man pages files were not included (#82)
 - Add an `available` field with `arch` and `os-distribution` in the opam files
   of the binary package (#74)
 - Improve logging behaviour in case of user interrupt (#80)
