@@ -5,7 +5,12 @@ open Bos
 module OV = Ocaml_version
 open Result.Syntax
 
-type tool = { name : string; pure_binary : bool; version : string option }
+type tool = {
+  name : string;
+  pure_binary : bool;
+  version : string option;
+  ocaml_version_dependent : bool;
+}
 (* FIXME: Once we use the opam library, let's use something like
    [OpamPackage.Name.t] for the type of [name] and something like ... for the
    type of [compiler_constr].*)
@@ -153,6 +158,7 @@ let install opam_opts tools =
                 let bname =
                   Binary_package.binary_name ~ocaml_version ~name:tool.name
                     ~ver:best_version ~pure_binary:tool.pure_binary
+                    ~ocaml_version_dependent:tool.ocaml_version_dependent
                 in
                 let to_build, action_s =
                   if should_use_cache && Binary_repo.has_binary_pkg repo bname
@@ -185,6 +191,10 @@ let install opam_opts tools =
             (fun () (i, (tool, bname)) ->
               Logs.app (fun m ->
                   m "  -> [%d/%d] Building %s..." (i + 1) n tool.name);
+              let ocaml_version =
+                if tool.ocaml_version_dependent then Some ocaml_version
+                else None
+              in
               make_binary_package opam_opts ~ocaml_version sandbox repo bname
                 tool)
             ()
@@ -217,7 +227,7 @@ let install opam_opts tools =
           tools_not_installed);
   Ok ()
 
-let find_ocamlformat_version () =
+let _find_ocamlformat_version () =
   match OS.File.read_lines (Fpath.v ".ocamlformat") with
   | Ok f ->
       List.filter_map
@@ -232,15 +242,20 @@ let find_ocamlformat_version () =
 (** TODO: This should be moved to an other module to for example do automatic
     recognizing of ocamlformat's version. *)
 let platform () =
+  let tool ?(pure_binary = false) ?(version = None)
+      ?(ocaml_version_dependent = true) name =
+    { name; pure_binary; version; ocaml_version_dependent }
+  in
   [
-    { name = "dune"; pure_binary = true; version = None };
-    { name = "dune-release"; pure_binary = false; version = None };
-    { name = "merlin"; pure_binary = false; version = None };
-    { name = "ocaml-lsp-server"; pure_binary = false; version = None };
-    { name = "odoc"; pure_binary = false; version = None };
-    {
-      name = "ocamlformat";
-      pure_binary = false;
-      version = find_ocamlformat_version ();
-    };
+    tool ~pure_binary:true "dune";
+    tool ~ocaml_version_dependent:false "dune-release"
+    (* tool "merlin"; *)
+    (* tool "ocaml-lsp-server"; *)
+    (* tool "odoc"; *)
+    (* tool ~ocaml_version_dependent:false *)
+    (*   ~version:(find_ocamlformat_version ()) *)
+    (*   "ocamlformat"; *)
+    (* tool "mdx"; *)
+    (* tool ~ocaml_version_dependent:false "opam-publish"; *)
+    (* tool "utop"; *);
   ]
