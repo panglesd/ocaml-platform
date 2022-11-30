@@ -2,6 +2,7 @@
 
 ## unreleased
 
+- Add a versionning and migration mechanism for the cache. (#137)
 - Keep cache repository enabled, for normal and pinned compilers. (#140)
 - Fix cached compiler package potentially being out of date. (#136)
 - Continue installing relevant tools even when some builds have failed (#133)
