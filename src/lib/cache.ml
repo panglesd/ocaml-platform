@@ -72,7 +72,7 @@ module Migrate_0_to_1 : Migrater = struct
   let migrate plugin_path =
     let packages_path = plugin_path / "cache" / "repo" / "packages" in
     let* () = iter_subdir migrate_package packages_path in
-    let archive_path = plugin_path / "cache" / "repo" / "archives" in
+    let archive_path = plugin_path / "cache" / "archives" in
     iter_subdir migrate_archive archive_path
 end
 
