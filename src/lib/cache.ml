@@ -26,8 +26,7 @@ module Migrate_0_to_1 : Migrater = struct
     let base, name = Fpath.split_base path in
     let new_name = f (Fpath.to_string name) in
     let new_path = base / new_name in
-    let+ () = Bos.OS.Cmd.run Cmd.(v "mv" % p path % p new_path) in
-    new_path
+    Bos.OS.Cmd.run Cmd.(v "mv" % p path % p new_path)
 
   let iter_subdir f dir =
     let* subdirs = OS.Dir.contents dir in
@@ -49,30 +48,24 @@ module Migrate_0_to_1 : Migrater = struct
     OS.File.write opam new_content
 
   (** The name of install file contains the package name: update that. *)
-  let migrate_install install =
-    let+ _new_path = modify_name strip_suffix install in
-    ()
+  let migrate_install install = modify_name strip_suffix install
 
   (** The name of a pkg ver directory contains the package name and the version:
       update that, and migrate the install file and the opam file. *)
   let migrate_version pkgver =
-    let* new_path =
-      modify_name (fun name -> strip_suffix name ^ new_version_suffix) pkgver
-    in
-    let* () = iter_subdir migrate_install (new_path / "files") in
-    let* () = migrate_opam (new_path / "opam") in
-    Ok ()
+    let* () = iter_subdir migrate_install (pkgver / "files") in
+    let* () = migrate_opam (pkgver / "opam") in
+    modify_name (fun name -> strip_suffix name ^ new_version_suffix) pkgver
 
   (** The name of a pkg directory contains the package name: update that, and
       migrate all pkgver directory inside. *)
   let migrate_package pkg =
-    let* new_path = modify_name strip_suffix pkg in
-    iter_subdir migrate_version new_path
+    let* () = iter_subdir migrate_version pkg in
+    modify_name strip_suffix pkg
 
   (** The name of an archive contains the package name and version: update that. *)
   let migrate_archive archive =
-    let+ _new_name = modify_name (migrate_suffix ~suffix:".tar.gz") archive in
-    ()
+    modify_name (migrate_suffix ~suffix:".tar.gz") archive
 
   (** Migrate all packages and archives. *)
   let migrate plugin_path =
