@@ -48,11 +48,10 @@ module Migrate_0_to_1 : Migrater = struct
     let new_content = migrate_suffix ~suffix:".tar.gz" content in
     OS.File.write opam new_content
 
-  (** The name of install file contains the package name and the version: update
-      that. *)
+  (** The name of install file contains the package name: update that. *)
   let migrate_install install =
-    let* new_path = modify_name (migrate_suffix ~suffix:".install") install in
-    Bos.OS.Cmd.run Cmd.(v "mv" % p install % p new_path)
+    let+ _new_path = modify_name strip_suffix install in
+    ()
 
   (** The name of a pkg ver directory contains the package name and the version:
       update that, and migrate the install file and the opam file. *)
@@ -78,21 +77,9 @@ module Migrate_0_to_1 : Migrater = struct
   (** Migrate all packages and archives. *)
   let migrate plugin_path =
     let packages_path = plugin_path / "cache" / "repo" / "packages" in
-    let* packages = OS.Dir.contents packages_path in
-    let* () =
-      List.fold_left
-        (fun acc package ->
-          let* () = acc in
-          migrate_package package)
-        (Ok ()) packages
-    in
+    let* () = iter_subdir migrate_package packages_path in
     let archive_path = plugin_path / "cache" / "repo" / "archives" in
-    let* archives = OS.Dir.contents archive_path in
-    List.fold_left
-      (fun acc archive ->
-        let* () = acc in
-        migrate_archive archive)
-      (Ok ()) archives
+    iter_subdir migrate_archive archive_path
 end
 
 let current_version = 1
