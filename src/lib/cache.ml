@@ -76,10 +76,10 @@ module Migrate_0_to_1 : Migrater = struct
     iter_subdir migrate_archive archive_path
 end
 
-let current_version = 1
-let version_file plugin_path = plugin_path / "ocaml-platform-version"
-
 module Migrate = struct
+  let current_version = 1
+  let version_file plugin_path = plugin_path / "ocaml-platform-version"
+
   let rec migrate_data plugin_path v =
     let* () =
       match v with 0 -> Migrate_0_to_1.migrate plugin_path | _ -> Ok ()
@@ -145,8 +145,6 @@ type t = {
 let load opam_opts ~pinned =
   let init_with_migration ~name plugin_path =
     let global_binary_repo_path = plugin_path / "cache" in
-    let version = version_file global_binary_repo_path in
-    let* () = OS.File.write version (string_of_int current_version) in
     let* () = Migrate.migrate plugin_path in
     Binary_repo.init ~name global_binary_repo_path
   in
