@@ -12,4 +12,5 @@
   ANSITerminal
   lwt
   lwt.unix
-  opam-file-format))
+  opam-file-format
+  str))
