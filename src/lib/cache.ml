@@ -26,7 +26,8 @@ module Migrate_0_to_1 : Migrater = struct
     let base, name = Fpath.split_base path in
     let new_name = f (Fpath.to_string name) in
     let new_path = base / new_name in
-    Bos.OS.Cmd.run Cmd.(v "mv" % p path % p new_path)
+    if Fpath.equal path new_path then Ok ()
+    else Bos.OS.Cmd.run Cmd.(v "mv" % p path % p new_path)
 
   let iter_subdir f dir =
     let* subdirs = OS.Dir.contents dir in
